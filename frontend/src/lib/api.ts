@@ -10,11 +10,6 @@ export interface TransferResponse {
   output_format: string;
 }
 
-export interface UploadResponse {
-  content: string;
-  filename: string;
-}
-
 export class ApiError extends Error {
   constructor(message: string) {
     super(message);
@@ -57,24 +52,6 @@ export async function transferAnnotations(
   if (!response.ok) {
     throw new ApiError(
       await parseApiError(response, `Transfer failed (${response.status})`),
-    );
-  }
-
-  return response.json();
-}
-
-export async function uploadFile(file: File): Promise<UploadResponse> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch("/api/upload", {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new ApiError(
-      await parseApiError(response, `Upload failed (${response.status})`),
     );
   }
 

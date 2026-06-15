@@ -4,10 +4,11 @@ Web app for transferring text annotations from a labeled source document onto a 
 
 ## What it does
 
-1. Paste or upload an **annotated source** (text with tags/labels).
-2. Paste or upload a **plain target** (same content without labels).
-3. Define **transfer rules** (type + regex) that describe how labels look.
+1. Paste or upload a **annotated source** `.txt` file (text with tags/labels).
+2. Paste or upload a **plain target** `.txt` file (same content without labels).
+3. Define **transfer rules** (type + regex) that describe how labels look, or import them from a `.txt` pattern file.
 4. Click **Transfer** — the backend copies labels from source onto target.
+5. Download the **after** result as a `.txt` file from the UI.
 
 ## Requirements
 
@@ -71,7 +72,8 @@ Open **http://localhost:5173/** (Vite dev server).
 |--------|------|-------------|
 | GET | `/api/health` | Health check |
 | POST | `/api/transfer` | Transfer annotations (JSON body) |
-| POST | `/api/upload` | Upload a text file (multipart form, field `file`) |
+
+File import and export (`.txt` only) are handled in the browser — no upload or download API.
 
 ### Transfer example
 
@@ -106,11 +108,12 @@ make test-cov
 annotation-transfer-tool/
 ├── frontend/              # React + Vite UI
 │   ├── src/app/App.tsx
-│   ├── src/lib/api.ts     # API client
+│   ├── src/lib/api.ts     # Transfer API client
+│   ├── src/lib/files.ts   # Browser .txt read/download helpers
 │   └── dist/              # build output (gitignored)
 ├── src/annotation_transfer_tool/
 │   ├── main.py            # FastAPI entry + static file serving
-│   ├── api/routes/        # health, transfer, upload
+│   ├── api/routes/        # health, transfer
 │   ├── schemas/
 │   └── services/
 ├── tests/

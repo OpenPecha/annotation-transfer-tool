@@ -3,14 +3,21 @@ import {
   Plus,
   Trash2,
   Upload,
+  Download,
   ArrowRight,
   Sun,
   Moon,
-  AtSign,
-  Send,
   Loader2,
+  Rows2,
+  Columns2,
 } from "lucide-react";
-import { transferAnnotations, uploadFile } from "@/lib/api";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/app/components/ui/resizable";
+import { transferAnnotations } from "@/lib/api";
+import { downloadTxtFile, readTxtFile } from "@/lib/files";
 import {
   parsePatternFile,
   rulesFromPairs,
@@ -19,6 +26,9 @@ import {
 
 export default function App() {
   const [dark, setDark] = useState(false);
+  const [panelLayout, setPanelLayout] = useState<"vertical" | "horizontal">(
+    "vertical",
+  );
 
   const [sourceText, setSourceText] = useState("");
   const [beforeText, setBeforeText] = useState("");
@@ -30,7 +40,6 @@ export default function App() {
   const [rulesFileName, setRulesFileName] = useState<string | null>(null);
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [targetFileName, setTargetFileName] = useState<string | null>(null);
-  const [mention, setMention] = useState("");
   const [transferring, setTransferring] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [uploadingPanel, setUploadingPanel] = useState<"source" | "target" | null>(
@@ -61,7 +70,7 @@ export default function App() {
     setUploadErrorPanel(null);
 
     try {
-      const { content, filename } = await uploadFile(file);
+      const { content, filename } = await readTxtFile(file);
       onLoad(content, filename);
     } catch (err) {
       const message =
@@ -97,7 +106,7 @@ export default function App() {
     setRulesError(null);
 
     try {
-      const { content } = await uploadFile(file);
+      const { content } = await readTxtFile(file);
       const pairs = parsePatternFile(content);
       const imported = rulesFromPairs(pairs);
       nextId.current = imported.length + 1;
@@ -160,6 +169,13 @@ export default function App() {
     if (rulesError) setRulesError(null);
   };
 
+  const handleDownloadAfter = () => {
+    if (!afterText.trim()) return;
+
+    const baseName = targetFileName?.replace(/\.txt$/i, "") ?? "transfer-result";
+    downloadTxtFile(afterText, `${baseName}-annotated.txt`);
+  };
+
   return (
     <div className={dark ? "dark" : ""}>
       <div className="h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground">
@@ -172,19 +188,49 @@ export default function App() {
             </span>
           </div>
 
-          <button
-            onClick={() => setDark(!dark)}
-            className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {dark ? <Sun size={13} /> : <Moon size={13} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() =>
+                setPanelLayout((layout) =>
+                  layout === "vertical" ? "horizontal" : "vertical",
+                )
+              }
+              title={
+                panelLayout === "vertical"
+                  ? "Switch to side-by-side layout"
+                  : "Switch to stacked layout"
+              }
+              className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {panelLayout === "vertical" ? (
+                <Columns2 size={13} />
+              ) : (
+                <Rows2 size={13} />
+              )}
+            </button>
+            <button
+              onClick={() => setDark(!dark)}
+              className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {dark ? <Sun size={13} /> : <Moon size={13} />}
+            </button>
+          </div>
         </header>
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-            <div className="flex flex-col border-b border-border overflow-hidden" style={{ height: "50%" }}>
+          <ResizablePanelGroup
+            key={panelLayout}
+            direction={panelLayout}
+            className="flex-1 min-w-0"
+          >
+            <ResizablePanel
+              defaultSize={50}
+              minSize={15}
+              className={`flex flex-col min-h-0 overflow-hidden ${
+                panelLayout === "vertical" ? "border-b" : "border-r"
+              } border-border`}
+            >
               <div className="h-10 shrink-0 flex items-center justify-between px-5 border-b border-border">
                 <div className="flex items-center gap-2">
                   <span className="text-xs mono tracking-widest text-muted-foreground uppercase">Source</span>
@@ -198,7 +244,7 @@ export default function App() {
                   <input
                     ref={sourceFileInputRef}
                     type="file"
-                    accept=".txt,.json,.csv,.xml,.md,.yaml,.yml"
+                    accept=".txt"
                     className="hidden"
                     onChange={handleSourceUpload}
                   />
@@ -258,9 +304,15 @@ export default function App() {
                   }}
                 />
               </div>
-            </div>
+            </ResizablePanel>
 
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <ResizableHandle withHandle />
+
+            <ResizablePanel
+              defaultSize={50}
+              minSize={15}
+              className="flex flex-col min-h-0 overflow-hidden"
+            >
               <div className="h-10 shrink-0 flex items-center justify-between px-5 border-b border-border">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-xs mono tracking-widest text-muted-foreground uppercase shrink-0">Target</span>
@@ -283,32 +335,42 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                {activeTab === "before" && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <input
-                      ref={targetFileInputRef}
-                      type="file"
-                      accept=".txt,.json,.csv,.xml,.md,.yaml,.yml"
-                      className="hidden"
-                      onChange={handleTargetUpload}
-                    />
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeTab === "before" ? (
+                    <>
+                      <input
+                        ref={targetFileInputRef}
+                        type="file"
+                        accept=".txt"
+                        className="hidden"
+                        onChange={handleTargetUpload}
+                      />
+                      <button
+                        onClick={() => targetFileInputRef.current?.click()}
+                        disabled={uploadingPanel === "target"}
+                        className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        {uploadingPanel === "target" ? (
+                          <>
+                            <Loader2 size={11} className="animate-spin" /> Uploading
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={11} /> Upload
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={() => targetFileInputRef.current?.click()}
-                      disabled={uploadingPanel === "target"}
+                      onClick={handleDownloadAfter}
+                      disabled={!afterText.trim()}
                       className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      {uploadingPanel === "target" ? (
-                        <>
-                          <Loader2 size={11} className="animate-spin" /> Uploading
-                        </>
-                      ) : (
-                        <>
-                          <Upload size={11} /> Upload
-                        </>
-                      )}
+                      <Download size={11} /> Download
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               {uploadError && uploadErrorPanel === "target" && (
                 <div className="shrink-0 px-5 py-2 border-b border-destructive/30 bg-destructive/10 text-xs text-destructive mono">
@@ -338,8 +400,8 @@ export default function App() {
                   }}
                 />
               </div>
-            </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
 
           <aside className="w-60 shrink-0 border-l border-border bg-card flex flex-col overflow-hidden">
             <div className="shrink-0 flex flex-col border-b border-border">
@@ -358,7 +420,7 @@ export default function App() {
                   <input
                     ref={rulesFileInputRef}
                     type="file"
-                    accept=".txt,.json,.yaml,.yml"
+                    accept=".txt"
                     className="hidden"
                     onChange={handleRulesUpload}
                   />
@@ -431,24 +493,10 @@ export default function App() {
           </aside>
         </div>
 
-        <div className="h-9 shrink-0 border-t border-border flex items-center px-4 gap-2 bg-card">
-          <AtSign size={12} className="text-accent shrink-0" />
-          <input
-            type="text"
-            value={mention}
-            onChange={(e) => setMention(e.target.value)}
-            placeholder="mention a collaborator or leave a comment…"
-            className="flex-1 bg-transparent text-xs text-foreground placeholder-muted-foreground outline-none mono"
-            onKeyDown={(e) => { if (e.key === "Enter") setMention(""); }}
-          />
-          {mention && (
-            <button
-              onClick={() => setMention("")}
-              className="text-muted-foreground hover:text-accent transition-colors"
-            >
-              <Send size={11} />
-            </button>
-          )}
+        <div className="h-9 shrink-0 border-t border-border flex items-center px-4 bg-card">
+          <p className="text-xs text-muted-foreground mono">
+            Internal annotation transfer tool — Webuddhist organization
+          </p>
         </div>
 
       </div>
