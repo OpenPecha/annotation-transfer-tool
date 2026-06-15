@@ -8,13 +8,14 @@ import {
   Moon,
   AtSign,
   Send,
+  Loader2,
 } from "lucide-react";
-
-interface Annotation {
-  id: number;
-  label: string;
-  note: string;
-}
+import { transferAnnotations, uploadFile } from "@/lib/api";
+import {
+  parsePatternFile,
+  rulesFromPairs,
+  type TransferRule,
+} from "@/lib/patterns";
 
 export default function App() {
   const [dark, setDark] = useState(false);
@@ -23,57 +24,140 @@ export default function App() {
   const [beforeText, setBeforeText] = useState("");
   const [afterText, setAfterText] = useState("");
   const [activeTab, setActiveTab] = useState<"before" | "after">("before");
-  const [annotations, setAnnotations] = useState<Annotation[]>([
-    { id: 1, label: "", note: "" },
+  const [rules, setRules] = useState<TransferRule[]>([
+    { id: 1, type: "", regex: "" },
   ]);
+  const [rulesFileName, setRulesFileName] = useState<string | null>(null);
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [targetFileName, setTargetFileName] = useState<string | null>(null);
   const [mention, setMention] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [uploadingPanel, setUploadingPanel] = useState<"source" | "target" | null>(
+    null,
+  );
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadErrorPanel, setUploadErrorPanel] = useState<"source" | "target" | null>(
+    null,
+  );
+  const [rulesUploading, setRulesUploading] = useState(false);
+  const [rulesError, setRulesError] = useState<string | null>(null);
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
   const targetFileInputRef = useRef<HTMLInputElement>(null);
+  const rulesFileInputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(2);
 
-  const readUploadedFile = (
+  const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
+    panel: "source" | "target",
     onLoad: (text: string, name: string) => void,
   ) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      onLoad(text, file.name);
-    };
-    reader.readAsText(file);
     e.target.value = "";
+    if (!file) return;
+
+    setUploadingPanel(panel);
+    setUploadError(null);
+    setUploadErrorPanel(null);
+
+    try {
+      const { content, filename } = await uploadFile(file);
+      onLoad(content, filename);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Upload failed. Please try again.";
+      setUploadError(message);
+      setUploadErrorPanel(panel);
+    } finally {
+      setUploadingPanel(null);
+    }
   };
 
   const handleSourceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    readUploadedFile(e, (text, name) => {
+    void handleFileUpload(e, "source", (text, name) => {
       setSourceText(text);
       setSourceFileName(name);
     });
   };
 
   const handleTargetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    readUploadedFile(e, (text, name) => {
+    void handleFileUpload(e, "target", (text, name) => {
       setBeforeText(text);
       setTargetFileName(name);
       setActiveTab("before");
     });
   };
 
-  const handleTransfer = () => { setAfterText(sourceText); setActiveTab("after"); };
+  const handleRulesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
 
-  const addAnnotation = () => {
-    setAnnotations((prev) => [...prev, { id: nextId.current++, label: "", note: "" }]);
+    setRulesUploading(true);
+    setRulesError(null);
+
+    try {
+      const { content } = await uploadFile(file);
+      const pairs = parsePatternFile(content);
+      const imported = rulesFromPairs(pairs);
+      nextId.current = imported.length + 1;
+      setRules(imported);
+      setRulesFileName(file.name);
+    } catch (err) {
+      setRulesError(
+        err instanceof Error ? err.message : "Failed to import transfer rules.",
+      );
+    } finally {
+      setRulesUploading(false);
+    }
   };
-  const removeAnnotation = (id: number) => {
-    if (annotations.length === 1) return;
-    setAnnotations((prev) => prev.filter((a) => a.id !== id));
+
+  const handleTransfer = async () => {
+    const patterns = rules
+      .filter((rule) => rule.type.trim() && rule.regex.trim())
+      .map((rule) => [rule.type.trim(), rule.regex.trim()] as [string, string]);
+
+    setTransferring(true);
+    setTransferError(null);
+
+    try {
+      const response = await transferAnnotations({
+        source: sourceText,
+        target: beforeText,
+        patterns,
+        output: "txt",
+      });
+
+      const result =
+        typeof response.result === "string"
+          ? response.result
+          : JSON.stringify(response.result, null, 2);
+
+      setAfterText(result);
+      setActiveTab("after");
+    } catch (err) {
+      setTransferError(
+        err instanceof Error ? err.message : "Transfer failed. Please try again.",
+      );
+    } finally {
+      setTransferring(false);
+    }
   };
-  const updateAnnotation = (id: number, field: "label" | "note", val: string) => {
-    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, [field]: val } : a)));
+
+  const addRule = () => {
+    setRules((prev) => [...prev, { id: nextId.current++, type: "", regex: "" }]);
+  };
+
+  const removeRule = (id: number) => {
+    if (rules.length === 1) return;
+    setRules((prev) => prev.filter((rule) => rule.id !== id));
+  };
+
+  const updateRule = (id: number, field: "type" | "regex", val: string) => {
+    setRules((prev) =>
+      prev.map((rule) => (rule.id === id ? { ...rule, [field]: val } : rule)),
+    );
+    if (rulesError) setRulesError(null);
   };
 
   return (
@@ -120,25 +204,58 @@ export default function App() {
                   />
                   <button
                     onClick={() => sourceFileInputRef.current?.click()}
-                    className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors"
+                    disabled={uploadingPanel === "source"}
+                    className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <Upload size={11} /> Upload
+                    {uploadingPanel === "source" ? (
+                      <>
+                        <Loader2 size={11} className="animate-spin" /> Uploading
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={11} /> Upload
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={handleTransfer}
-                    disabled={!sourceText.trim() || !beforeText.trim()}
+                    disabled={
+                      !sourceText.trim() ||
+                      !beforeText.trim() ||
+                      transferring
+                    }
                     className="flex items-center gap-1.5 px-2.5 py-1 bg-accent text-accent-foreground text-xs disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   >
-                    Transfer <ArrowRight size={11} />
+                    {transferring ? (
+                      <>
+                        <Loader2 size={11} className="animate-spin" /> Transferring
+                      </>
+                    ) : (
+                      <>
+                        Transfer <ArrowRight size={11} />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
+              {(transferError || (uploadError && uploadErrorPanel === "source")) && (
+                <div className="shrink-0 px-5 py-2 border-b border-destructive/30 bg-destructive/10 text-xs text-destructive mono">
+                  {transferError ?? uploadError}
+                </div>
+              )}
               <div className="flex-1 overflow-y-auto">
                 <textarea
                   className="w-full h-full bg-transparent resize-none text-sm text-foreground px-5 py-3 outline-none placeholder-muted-foreground mono leading-relaxed"
                   placeholder="Paste annotated source text, or upload a file…"
                   value={sourceText}
-                  onChange={(e) => setSourceText(e.target.value)}
+                  onChange={(e) => {
+                    setSourceText(e.target.value);
+                    if (transferError) setTransferError(null);
+                    if (uploadErrorPanel === "source") {
+                      setUploadError(null);
+                      setUploadErrorPanel(null);
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -177,13 +294,27 @@ export default function App() {
                     />
                     <button
                       onClick={() => targetFileInputRef.current?.click()}
-                      className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors"
+                      disabled={uploadingPanel === "target"}
+                      className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <Upload size={11} /> Upload
+                      {uploadingPanel === "target" ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" /> Uploading
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={11} /> Upload
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
               </div>
+              {uploadError && uploadErrorPanel === "target" && (
+                <div className="shrink-0 px-5 py-2 border-b border-destructive/30 bg-destructive/10 text-xs text-destructive mono">
+                  {uploadError}
+                </div>
+              )}
               <div className="flex-1 overflow-y-auto">
                 <textarea
                   key={activeTab}
@@ -194,53 +325,97 @@ export default function App() {
                       : "After state — appears when you transfer."
                   }
                   value={activeTab === "before" ? beforeText : afterText}
-                  onChange={(e) =>
-                    activeTab === "before"
-                      ? setBeforeText(e.target.value)
-                      : setAfterText(e.target.value)
-                  }
+                  onChange={(e) => {
+                    if (activeTab === "before") {
+                      setBeforeText(e.target.value);
+                      if (uploadErrorPanel === "target") {
+                        setUploadError(null);
+                        setUploadErrorPanel(null);
+                      }
+                    } else {
+                      setAfterText(e.target.value);
+                    }
+                  }}
                 />
               </div>
             </div>
           </div>
 
           <aside className="w-60 shrink-0 border-l border-border bg-card flex flex-col overflow-hidden">
-            <div className="h-10 shrink-0 flex items-center justify-between px-4 border-b border-border">
-              <span className="text-xs mono tracking-widest text-muted-foreground uppercase">Annotations</span>
-              <button
-                onClick={addAnnotation}
-                className="flex items-center gap-1 px-2 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors"
-              >
-                <Plus size={11} /> Add
-              </button>
+            <div className="shrink-0 flex flex-col border-b border-border">
+              <div className="min-h-10 flex items-center justify-between px-4 py-2 gap-1">
+                <div className="min-w-0">
+                  <span className="text-xs mono tracking-widest text-muted-foreground uppercase block leading-tight">
+                    Transfer rules
+                  </span>
+                  {rulesFileName && (
+                    <span className="text-[10px] mono text-accent truncate block leading-tight mt-0.5">
+                      {rulesFileName}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <input
+                    ref={rulesFileInputRef}
+                    type="file"
+                    accept=".txt,.json,.yaml,.yml"
+                    className="hidden"
+                    onChange={handleRulesUpload}
+                  />
+                  <button
+                    onClick={() => rulesFileInputRef.current?.click()}
+                    disabled={rulesUploading}
+                    title="Import rules from pattern file"
+                    className="flex items-center gap-1 px-2 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {rulesUploading ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <Upload size={11} />
+                    )}
+                    Import
+                  </button>
+                  <button
+                    onClick={addRule}
+                    className="flex items-center gap-1 px-2 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors"
+                  >
+                    <Plus size={11} /> Add
+                  </button>
+                </div>
+              </div>
+              {rulesError && (
+                <div className="px-4 pb-2 text-[10px] text-destructive mono leading-snug">
+                  {rulesError}
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-2.5">
-              {annotations.map((ann, i) => (
-                <div key={ann.id} className="border border-border bg-background p-3 flex flex-col gap-2">
+              {rules.map((rule, i) => (
+                <div key={rule.id} className="border border-border bg-background p-3 flex flex-col gap-2">
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-muted-foreground mono shrink-0">
                       #{String(i + 1).padStart(2, "0")}
                     </span>
                     <input
                       type="text"
-                      placeholder="Label"
-                      value={ann.label}
-                      onChange={(e) => updateAnnotation(ann.id, "label", e.target.value)}
+                      placeholder="Type (e.g. pos)"
+                      value={rule.type}
+                      onChange={(e) => updateRule(rule.id, "type", e.target.value)}
                       className="flex-1 bg-transparent text-xs text-foreground placeholder-muted-foreground outline-none mx-2"
                     />
                     <button
-                      onClick={() => removeAnnotation(ann.id)}
-                      disabled={annotations.length === 1}
+                      onClick={() => removeRule(rule.id)}
+                      disabled={rules.length === 1}
                       className="text-muted-foreground hover:text-destructive disabled:opacity-20 transition-colors"
                     >
                       <Trash2 size={11} />
                     </button>
                   </div>
                   <textarea
-                    placeholder="Note…"
-                    value={ann.note}
-                    onChange={(e) => updateAnnotation(ann.id, "note", e.target.value)}
+                    placeholder="Regex (e.g. (/.+? ))"
+                    value={rule.regex}
+                    onChange={(e) => updateRule(rule.id, "regex", e.target.value)}
                     rows={3}
                     className="w-full bg-secondary text-xs text-foreground placeholder-muted-foreground px-2.5 py-2 resize-none outline-none focus:ring-1 focus:ring-accent transition-shadow mono leading-relaxed"
                   />
@@ -250,7 +425,7 @@ export default function App() {
 
             <div className="h-8 shrink-0 border-t border-border flex items-center px-4">
               <p className="text-xs text-muted-foreground mono">
-                {annotations.length} annotation{annotations.length !== 1 ? "s" : ""}
+                {rules.length} rule{rules.length !== 1 ? "s" : ""}
               </p>
             </div>
           </aside>

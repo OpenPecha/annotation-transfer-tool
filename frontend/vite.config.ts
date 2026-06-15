@@ -4,6 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  base: '/',
+  build: {
+    outDir: 'dist',
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -11,6 +15,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8000',
     },
   },
   assetsInclude: ['**/*.svg', '**/*.csv'],
