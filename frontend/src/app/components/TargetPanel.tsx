@@ -115,7 +115,7 @@ export function TargetPanel({
       <div className="flex-1 overflow-y-auto">
         <textarea
           key={activeTab}
-          className="w-full h-full bg-transparent resize-none text-sm text-foreground px-5 py-3 outline-none placeholder-muted-foreground mono leading-relaxed placeholder:opacity-30"
+          className="w-full h-full bg-transparent resize-none text-sm text-foreground px-5 py-3 outline-none placeholder:text-muted-foreground/25 mono leading-relaxed"
           placeholder={
             activeTab === "before"
               ? labels.targetBeforePlaceholder

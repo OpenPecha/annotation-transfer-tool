@@ -42,7 +42,7 @@ export function AppHeader({
           className="h-9 w-9 rounded-xl shadow-[0_0_18px_rgba(34,211,238,0.35)]"
         />
         <div className="flex flex-col leading-none">
-          <span className="text-xs tracking-[0.18em] uppercase text-foreground font-semibold mono">
+          <span className="text-[10px] tracking-[0.1em] uppercase text-foreground font-semibold mono leading-snug">
             {labels.appTitle}
           </span>
           <span className="mt-1 text-[10px] tracking-[0.16em] uppercase text-accent mono">

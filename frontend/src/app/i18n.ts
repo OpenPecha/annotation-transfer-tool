@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    appTitle: "Annotate",
+    appTitle: "Annotation Transfer Tool",
     languageLabel: "Language",
     english: "English",
     tibetan: "Tibetan",
@@ -34,7 +34,7 @@ export const translations = {
     rulesImportFailed: "Failed to import transfer rules.",
   },
   bo: {
-    appTitle: "མཆན་འགོད།",
+    appTitle: "མཆན་སྤོ་སྒྱུར་ལག་ཆ།",
     languageLabel: "སྐད་ཡིག",
     english: "English",
     tibetan: "བོད་ཡིག",

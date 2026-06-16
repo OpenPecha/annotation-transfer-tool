@@ -93,7 +93,7 @@ export function TransferRulesPanel({
                 placeholder={labels.typePlaceholder}
                 value={rule.type}
                 onChange={(e) => onUpdateRule(rule.id, "type", e.target.value)}
-                className="flex-1 bg-transparent text-xs text-foreground placeholder-muted-foreground outline-none mx-2"
+                className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/25 outline-none mx-2"
               />
               <button
                 onClick={() => onRemoveRule(rule.id)}
@@ -108,7 +108,7 @@ export function TransferRulesPanel({
               value={rule.regex}
               onChange={(e) => onUpdateRule(rule.id, "regex", e.target.value)}
               rows={3}
-              className="w-full bg-secondary text-xs text-foreground placeholder-muted-foreground px-2.5 py-2 resize-none outline-none focus:ring-1 focus:ring-accent transition-shadow mono leading-relaxed"
+              className="w-full bg-secondary text-xs text-foreground placeholder:text-muted-foreground/25 px-2.5 py-2 resize-none outline-none focus:ring-1 focus:ring-accent transition-shadow mono leading-relaxed"
             />
           </div>
         ))}

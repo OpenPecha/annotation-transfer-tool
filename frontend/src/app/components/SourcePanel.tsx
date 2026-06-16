@@ -109,7 +109,7 @@ export function SourcePanel({
       )}
       <div className="flex-1 overflow-y-auto">
         <textarea
-          className="w-full h-full bg-transparent resize-none text-sm text-foreground px-5 py-3 outline-none placeholder:opacity-30 placeholder:text-muted-foreground mono leading-relaxed text-foreground"
+          className="w-full h-full bg-transparent resize-none text-sm text-foreground px-5 py-3 outline-none placeholder:text-muted-foreground/25 mono leading-relaxed"
           placeholder={labels.sourcePlaceholder}
           value={sourceText}
           onChange={(e) => {
