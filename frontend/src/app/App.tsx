@@ -1,21 +1,14 @@
 import { useState, useRef } from "react";
 import {
-  Plus,
-  Trash2,
-  Upload,
-  Download,
-  ArrowRight,
-  Sun,
-  Moon,
-  Loader2,
-  Rows2,
-  Columns2,
-} from "lucide-react";
-import {
   ResizableHandle,
-  ResizablePanel,
   ResizablePanelGroup,
 } from "@/app/components/ui/resizable";
+import { AppHeader } from "@/app/components/AppHeader";
+import { SourcePanel } from "@/app/components/SourcePanel";
+import { TargetPanel } from "@/app/components/TargetPanel";
+import { TransferRulesPanel } from "@/app/components/TransferRulesPanel";
+import { translations } from "@/app/i18n";
+import type { ActiveTab, Language, PanelLayout } from "@/app/types";
 import { transferAnnotations } from "@/lib/api";
 import { downloadTxtFile, readTxtFile } from "@/lib/files";
 import {
@@ -26,14 +19,14 @@ import {
 
 export default function App() {
   const [dark, setDark] = useState(false);
-  const [panelLayout, setPanelLayout] = useState<"vertical" | "horizontal">(
-    "vertical",
-  );
+  const [language, setLanguage] = useState<Language>("en");
+  const [panelLayout, setPanelLayout] = useState<PanelLayout>("vertical");
+  const labels = translations[language];
 
   const [sourceText, setSourceText] = useState("");
   const [beforeText, setBeforeText] = useState("");
   const [afterText, setAfterText] = useState("");
-  const [activeTab, setActiveTab] = useState<"before" | "after">("before");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("before");
   const [rules, setRules] = useState<TransferRule[]>([
     { id: 1, type: "", regex: "" },
   ]);
@@ -74,7 +67,7 @@ export default function App() {
       onLoad(content, filename);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Upload failed. Please try again.";
+        err instanceof Error ? err.message : labels.uploadFailed;
       setUploadError(message);
       setUploadErrorPanel(panel);
     } finally {
@@ -114,7 +107,7 @@ export default function App() {
       setRulesFileName(file.name);
     } catch (err) {
       setRulesError(
-        err instanceof Error ? err.message : "Failed to import transfer rules.",
+        err instanceof Error ? err.message : labels.rulesImportFailed,
       );
     } finally {
       setRulesUploading(false);
@@ -146,7 +139,7 @@ export default function App() {
       setActiveTab("after");
     } catch (err) {
       setTransferError(
-        err instanceof Error ? err.message : "Transfer failed. Please try again.",
+        err instanceof Error ? err.message : labels.transferFailed,
       );
     } finally {
       setTransferring(false);
@@ -155,11 +148,13 @@ export default function App() {
 
   const addRule = () => {
     setRules((prev) => [...prev, { id: nextId.current++, type: "", regex: "" }]);
+    if (rulesFileName) setRulesFileName(null);
   };
 
   const removeRule = (id: number) => {
     if (rules.length === 1) return;
     setRules((prev) => prev.filter((rule) => rule.id !== id));
+    if (rulesFileName) setRulesFileName(null);
   };
 
   const updateRule = (id: number, field: "type" | "regex", val: string) => {
@@ -167,6 +162,43 @@ export default function App() {
       prev.map((rule) => (rule.id === id ? { ...rule, [field]: val } : rule)),
     );
     if (rulesError) setRulesError(null);
+    if (rulesFileName) setRulesFileName(null);
+  };
+
+  const hasWork =
+    Boolean(sourceText.trim()) ||
+    Boolean(beforeText.trim()) ||
+    Boolean(afterText.trim()) ||
+    rules.some((rule) => rule.type.trim() || rule.regex.trim()) ||
+    Boolean(sourceFileName) ||
+    Boolean(targetFileName) ||
+    Boolean(rulesFileName);
+
+  const handleReset = () => {
+    if (transferring) return;
+
+    setSourceText("");
+    setBeforeText("");
+    setAfterText("");
+    setActiveTab("before");
+
+    setSourceFileName(null);
+    setTargetFileName(null);
+    setRulesFileName(null);
+
+    setRules([{ id: 1, type: "", regex: "" }]);
+    nextId.current = 2;
+
+    setTransferError(null);
+    setUploadError(null);
+    setUploadErrorPanel(null);
+    setRulesError(null);
+    setUploadingPanel(null);
+    setRulesUploading(false);
+
+    if (sourceFileInputRef.current) sourceFileInputRef.current.value = "";
+    if (targetFileInputRef.current) targetFileInputRef.current.value = "";
+    if (rulesFileInputRef.current) rulesFileInputRef.current.value = "";
   };
 
   const handleDownloadAfter = () => {
@@ -176,326 +208,106 @@ export default function App() {
     downloadTxtFile(afterText, `${baseName}-annotated.txt`);
   };
 
+  const handleSourceTextChange = (value: string) => {
+    setSourceText(value);
+    if (!value.trim()) setSourceFileName(null);
+  };
+
+  const handleBeforeTextChange = (value: string) => {
+    setBeforeText(value);
+    if (!value.trim()) setTargetFileName(null);
+  };
+
+  const clearUploadError = () => {
+    setUploadError(null);
+    setUploadErrorPanel(null);
+  };
+
+  const toggleLayout = () => {
+    setPanelLayout((layout) =>
+      layout === "vertical" ? "horizontal" : "vertical",
+    );
+  };
+
   return (
     <div className={dark ? "dark" : ""}>
       <div className="h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground">
-
-        <header className="h-11 shrink-0 border-b border-border px-5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            <span className="text-xs tracking-[0.18em] uppercase text-muted-foreground font-medium mono">
-              Annotate
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() =>
-                setPanelLayout((layout) =>
-                  layout === "vertical" ? "horizontal" : "vertical",
-                )
-              }
-              title={
-                panelLayout === "vertical"
-                  ? "Switch to side-by-side layout"
-                  : "Switch to stacked layout"
-              }
-              className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {panelLayout === "vertical" ? (
-                <Columns2 size={13} />
-              ) : (
-                <Rows2 size={13} />
-              )}
-            </button>
-            <button
-              onClick={() => setDark(!dark)}
-              className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {dark ? <Sun size={13} /> : <Moon size={13} />}
-            </button>
-          </div>
-        </header>
+        <AppHeader
+          dark={dark}
+          language={language}
+          labels={labels}
+          panelLayout={panelLayout}
+          transferring={transferring}
+          hasWork={hasWork}
+          onReset={handleReset}
+          onToggleDark={() => setDark(!dark)}
+          onToggleLayout={toggleLayout}
+          onLanguageChange={setLanguage}
+        />
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
-
           <ResizablePanelGroup
             key={panelLayout}
             direction={panelLayout}
             className="flex-1 min-w-0"
           >
-            <ResizablePanel
-              defaultSize={50}
-              minSize={15}
-              className={`flex flex-col min-h-0 overflow-hidden ${
-                panelLayout === "vertical" ? "border-b" : "border-r"
-              } border-border`}
-            >
-              <div className="h-10 shrink-0 flex items-center justify-between px-5 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs mono tracking-widest text-muted-foreground uppercase">Source</span>
-                  {sourceFileName && (
-                    <span className="text-xs mono text-accent border border-accent/30 px-1.5 py-0.5 leading-none">
-                      {sourceFileName}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={sourceFileInputRef}
-                    type="file"
-                    accept=".txt"
-                    className="hidden"
-                    onChange={handleSourceUpload}
-                  />
-                  <button
-                    onClick={() => sourceFileInputRef.current?.click()}
-                    disabled={uploadingPanel === "source"}
-                    className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    {uploadingPanel === "source" ? (
-                      <>
-                        <Loader2 size={11} className="animate-spin" /> Uploading
-                      </>
-                    ) : (
-                      <>
-                        <Upload size={11} /> Upload
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleTransfer}
-                    disabled={
-                      !sourceText.trim() ||
-                      !beforeText.trim() ||
-                      transferring
-                    }
-                    className="flex items-center gap-1.5 px-2.5 py-1 bg-accent text-accent-foreground text-xs disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                  >
-                    {transferring ? (
-                      <>
-                        <Loader2 size={11} className="animate-spin" /> Transferring
-                      </>
-                    ) : (
-                      <>
-                        Transfer <ArrowRight size={11} />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-              {(transferError || (uploadError && uploadErrorPanel === "source")) && (
-                <div className="shrink-0 px-5 py-2 border-b border-destructive/30 bg-destructive/10 text-xs text-destructive mono">
-                  {transferError ?? uploadError}
-                </div>
-              )}
-              <div className="flex-1 overflow-y-auto">
-                <textarea
-                  className="w-full h-full bg-transparent resize-none text-sm text-foreground px-5 py-3 outline-none placeholder-muted-foreground mono leading-relaxed"
-                  placeholder="Paste annotated source text, or upload a file…"
-                  value={sourceText}
-                  onChange={(e) => {
-                    setSourceText(e.target.value);
-                    if (transferError) setTransferError(null);
-                    if (uploadErrorPanel === "source") {
-                      setUploadError(null);
-                      setUploadErrorPanel(null);
-                    }
-                  }}
-                />
-              </div>
-            </ResizablePanel>
+            <SourcePanel
+              labels={labels}
+              panelLayout={panelLayout}
+              sourceText={sourceText}
+              beforeText={beforeText}
+              sourceFileName={sourceFileName}
+              transferring={transferring}
+              transferError={transferError}
+              uploadingPanel={uploadingPanel}
+              uploadError={uploadError}
+              uploadErrorPanel={uploadErrorPanel}
+              sourceFileInputRef={sourceFileInputRef}
+              onSourceUpload={handleSourceUpload}
+              onTransfer={handleTransfer}
+              onSourceTextChange={handleSourceTextChange}
+              onClearTransferError={() => setTransferError(null)}
+              onClearUploadError={clearUploadError}
+            />
 
             <ResizableHandle withHandle />
 
-            <ResizablePanel
-              defaultSize={50}
-              minSize={15}
-              className="flex flex-col min-h-0 overflow-hidden"
-            >
-              <div className="h-10 shrink-0 flex items-center justify-between px-5 border-b border-border">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs mono tracking-widest text-muted-foreground uppercase shrink-0">Target</span>
-                  {targetFileName && activeTab === "before" && (
-                    <span className="text-xs mono text-accent border border-accent/30 px-1.5 py-0.5 leading-none truncate">
-                      {targetFileName}
-                    </span>
-                  )}
-                  {(["before", "after"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`h-10 px-3 text-xs capitalize border-b-2 -mb-px transition-colors ${
-                        activeTab === tab
-                          ? "border-accent text-accent"
-                          : "border-transparent text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {activeTab === "before" ? (
-                    <>
-                      <input
-                        ref={targetFileInputRef}
-                        type="file"
-                        accept=".txt"
-                        className="hidden"
-                        onChange={handleTargetUpload}
-                      />
-                      <button
-                        onClick={() => targetFileInputRef.current?.click()}
-                        disabled={uploadingPanel === "target"}
-                        className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        {uploadingPanel === "target" ? (
-                          <>
-                            <Loader2 size={11} className="animate-spin" /> Uploading
-                          </>
-                        ) : (
-                          <>
-                            <Upload size={11} /> Upload
-                          </>
-                        )}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={handleDownloadAfter}
-                      disabled={!afterText.trim()}
-                      className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <Download size={11} /> Download
-                    </button>
-                  )}
-                </div>
-              </div>
-              {uploadError && uploadErrorPanel === "target" && (
-                <div className="shrink-0 px-5 py-2 border-b border-destructive/30 bg-destructive/10 text-xs text-destructive mono">
-                  {uploadError}
-                </div>
-              )}
-              <div className="flex-1 overflow-y-auto">
-                <textarea
-                  key={activeTab}
-                  className="w-full h-full bg-transparent resize-none text-sm text-foreground px-5 py-3 outline-none placeholder-muted-foreground mono leading-relaxed"
-                  placeholder={
-                    activeTab === "before"
-                      ? "Paste plain target text, or upload a file…"
-                      : "After state — appears when you transfer."
-                  }
-                  value={activeTab === "before" ? beforeText : afterText}
-                  onChange={(e) => {
-                    if (activeTab === "before") {
-                      setBeforeText(e.target.value);
-                      if (uploadErrorPanel === "target") {
-                        setUploadError(null);
-                        setUploadErrorPanel(null);
-                      }
-                    } else {
-                      setAfterText(e.target.value);
-                    }
-                  }}
-                />
-              </div>
-            </ResizablePanel>
+            <TargetPanel
+              labels={labels}
+              activeTab={activeTab}
+              beforeText={beforeText}
+              afterText={afterText}
+              targetFileName={targetFileName}
+              uploadingPanel={uploadingPanel}
+              uploadError={uploadError}
+              uploadErrorPanel={uploadErrorPanel}
+              targetFileInputRef={targetFileInputRef}
+              onTabChange={setActiveTab}
+              onTargetUpload={handleTargetUpload}
+              onDownloadAfter={handleDownloadAfter}
+              onBeforeTextChange={handleBeforeTextChange}
+              onAfterTextChange={setAfterText}
+              onClearUploadError={clearUploadError}
+            />
           </ResizablePanelGroup>
 
-          <aside className="w-60 shrink-0 border-l border-border bg-card flex flex-col overflow-hidden">
-            <div className="shrink-0 flex flex-col border-b border-border">
-              <div className="min-h-10 flex items-center justify-between px-4 py-2 gap-1">
-                <div className="min-w-0">
-                  <span className="text-xs mono tracking-widest text-muted-foreground uppercase block leading-tight">
-                    Transfer rules
-                  </span>
-                  {rulesFileName && (
-                    <span className="text-[10px] mono text-accent truncate block leading-tight mt-0.5">
-                      {rulesFileName}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <input
-                    ref={rulesFileInputRef}
-                    type="file"
-                    accept=".txt"
-                    className="hidden"
-                    onChange={handleRulesUpload}
-                  />
-                  <button
-                    onClick={() => rulesFileInputRef.current?.click()}
-                    disabled={rulesUploading}
-                    title="Import rules from pattern file"
-                    className="flex items-center gap-1 px-2 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    {rulesUploading ? (
-                      <Loader2 size={11} className="animate-spin" />
-                    ) : (
-                      <Upload size={11} />
-                    )}
-                    Import
-                  </button>
-                  <button
-                    onClick={addRule}
-                    className="flex items-center gap-1 px-2 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground text-xs transition-colors"
-                  >
-                    <Plus size={11} /> Add
-                  </button>
-                </div>
-              </div>
-              {rulesError && (
-                <div className="px-4 pb-2 text-[10px] text-destructive mono leading-snug">
-                  {rulesError}
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-2.5">
-              {rules.map((rule, i) => (
-                <div key={rule.id} className="border border-border bg-background p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground mono shrink-0">
-                      #{String(i + 1).padStart(2, "0")}
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="Type (e.g. pos)"
-                      value={rule.type}
-                      onChange={(e) => updateRule(rule.id, "type", e.target.value)}
-                      className="flex-1 bg-transparent text-xs text-foreground placeholder-muted-foreground outline-none mx-2"
-                    />
-                    <button
-                      onClick={() => removeRule(rule.id)}
-                      disabled={rules.length === 1}
-                      className="text-muted-foreground hover:text-destructive disabled:opacity-20 transition-colors"
-                    >
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
-                  <textarea
-                    placeholder="Regex (e.g. (/.+? ))"
-                    value={rule.regex}
-                    onChange={(e) => updateRule(rule.id, "regex", e.target.value)}
-                    rows={3}
-                    className="w-full bg-secondary text-xs text-foreground placeholder-muted-foreground px-2.5 py-2 resize-none outline-none focus:ring-1 focus:ring-accent transition-shadow mono leading-relaxed"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="h-8 shrink-0 border-t border-border flex items-center px-4">
-              <p className="text-xs text-muted-foreground mono">
-                {rules.length} rule{rules.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-          </aside>
+          <TransferRulesPanel
+            labels={labels}
+            rules={rules}
+            rulesFileName={rulesFileName}
+            rulesUploading={rulesUploading}
+            rulesError={rulesError}
+            rulesFileInputRef={rulesFileInputRef}
+            onRulesUpload={handleRulesUpload}
+            onAddRule={addRule}
+            onRemoveRule={removeRule}
+            onUpdateRule={updateRule}
+          />
         </div>
 
         <div className="h-9 shrink-0 border-t border-border flex items-center px-4 bg-card">
           <p className="text-xs text-muted-foreground mono">
-            Internal annotation transfer tool — Webuddhist organization
+            {labels.footer}
           </p>
         </div>
 
