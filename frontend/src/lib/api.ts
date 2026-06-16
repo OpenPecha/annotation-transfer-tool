@@ -17,14 +17,6 @@ export class ApiError extends Error {
   }
 }
 
-/** @deprecated use ApiError */
-export class TransferApiError extends ApiError {
-  constructor(message: string) {
-    super(message);
-    this.name = "TransferApiError";
-  }
-}
-
 async function parseApiError(response: Response, fallback: string): Promise<string> {
   try {
     const body = await response.json();
