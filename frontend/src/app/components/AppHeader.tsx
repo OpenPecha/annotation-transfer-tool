@@ -4,7 +4,7 @@ import type { AppLabels } from "@/app/i18n";
 import type { PanelLayout } from "@/app/types";
 import type { Language } from "@/app/types";
 
-const LOGO_URL = "https://avatars.githubusercontent.com/u/82142807?s=280&v=4";
+const LOGO_URL = "/logo.png";
 
 interface AppHeaderProps {
   dark: boolean;
