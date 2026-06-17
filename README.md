@@ -1,148 +1,135 @@
-# README
+# Annotation Transfer Tool
 
-> **Note:** This readme template is based on one from the [Good Docs Project](https://thegooddocsproject.dev). You can find it and a guide to filling it out [here](https://gitlab.com/tgdp/templates/-/tree/main/readme). (_Erase this note after filling out the readme._)
+Web app for transferring text annotations from a labeled source document onto a plain target document, powered by [fast-antx](https://github.com/OpenPecha/fast-antx).
 
-<h1 align="center">
-  <br>
-  <a href="https://openpecha.org"><img src="https://avatars.githubusercontent.com/u/82142807?s=400&u=19e108a15566f3a1449bafb03b8dd706a72aebcd&v=4" alt="OpenPecha" width="150"></a>
-  <br>
-</h1>
+## What it does
 
-## _Project Name_
-_The project name should match its code's capability so that new users can easily understand what it does._
+1. Paste or upload a **annotated source** `.txt` file (text with tags/labels).
+2. Paste or upload a **plain target** `.txt` file (same content without labels).
+3. Define **transfer rules** (type + regex) that describe how labels look, or import them from a `.txt` pattern file.
+4. Click **Transfer** — the backend copies labels from source onto target.
+5. Download the **after** result as a `.txt` file from the UI.
 
-## Owner(s)
+## Requirements
 
-_Change to the owner(s) of the new repo. (This template's owners are:)_
-- [@ngawangtrinley](https://github.com/ngawangtrinley)
-- [@mikkokotila](https://github.com/mikkokotila)
-- [@evanyerburgh](https://github.com/evanyerburgh)
+- Python 3.8+
+- Node.js 18+ (for frontend development/build)
 
+## Install
 
-## Table of contents
-<p align="center">
-  <a href="#project-description">Project description</a> •
-  <a href="#who-this-project-is-for">Who this project is for</a> •
-  <a href="#project-dependencies">Project dependencies</a> •
-  <a href="#instructions-for-use">Instructions for use</a> •
-  <a href="#contributing-guidelines">Contributing guidelines</a> •
-  <a href="#additional-documentation">Additional documentation</a> •
-  <a href="#how-to-get-help">How to get help</a> •
-  <a href="#terms-of-use">Terms of use</a>
-</p>
-<hr>
+```bash
+git clone https://github.com/OpenPecha/annotation-transfer-tool.git
+cd annotation-transfer-tool
 
-## Project description
-_Use one of these:_
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
-With _Project Name_ you can _verb_ _noun_...
+pip install -e ".[dev]"
+cd frontend && npm install && cd ..
+```
 
-_Project Name_ helps you _verb_ _noun_...
+Or use the Makefile:
 
+```bash
+make install
+```
 
-## Who this project is for
-This project is intended for _target user_ who wants to _user objective_.
+## Run (production-style — one server)
 
+Build the frontend, then start FastAPI. The same server serves the UI and API.
 
-## Project dependencies
-Before using _Project Name_, ensure you have:
-* python _version_
-* _Prerequisite 2_
-* _Prerequisite 3..._
+```bash
+cd frontend && npm run build && cd ..
+source .venv/bin/activate
+uvicorn annotation_transfer_tool.main:app --reload --app-dir src
+```
 
+Open **http://localhost:8000/** for the app.
 
-## Instructions for use
-Get started with _Project Name_ by _(write the first step a user needs to start using the project. Use a verb to start.)_.
+| URL | Purpose |
+|-----|---------|
+| http://localhost:8000/ | React UI |
+| http://localhost:8000/docs | Swagger API docs |
+| http://localhost:8000/api/health | Health check |
 
+## Run (development — hot reload)
 
-### Install _Project Name_
-1. _Write the step here._ 
+Use two terminals:
 
-    _Explanatory text here_ 
-    
-    _(Optional: Include a code sample or screenshot that helps your users complete this step.)_
+```bash
+# Terminal 1 — API
+make dev-api
 
-2. _Write the step here._
- 
-    a. _Substep 1_ 
-    
-    b. _Substep 2_
+# Terminal 2 — UI (proxies /api to port 8000)
+make dev-ui
+```
 
+Open **http://localhost:5173/** (Vite dev server).
 
-### Configure _Project Name_
-1. _Write the step here._
-2. _Write the step here._
+## API endpoints
 
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Health check |
+| POST | `/api/transfer` | Transfer annotations (JSON body) |
 
-### Run _Project Name_
-1. _Write the step here._
-2. _Write the step here._
+File import and export (`.txt` only) are handled in the browser — no upload or download API.
 
+### Transfer example
 
-### Troubleshoot _Project Name_
-1. _Write the step here._
-2. _Write the step here._
+```bash
+curl -X POST http://localhost:8000/api/transfer \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "source": "#A# cat",
+    "target": "cat",
+    "patterns": [["color", "(#.+?#)"]],
+    "output": "txt"
+  }'
+```
 
-<table>
-  <tr>
-   <td>
-    Issue
-   </td>
-   <td>
-    Solution
-   </td>
-  </tr>
-  <tr>
-   <td>
-    _Describe the issue here_
-   </td>
-   <td>
-    _Write solution here_
-   </td>
-  </tr>
-  <tr>
-   <td>
-    _Describe the issue here_
-   </td>
-   <td>
-    _Write solution here_
-   </td>
-  </tr>
-  <tr>
-   <td>
-    _Describe the issue here_
-   </td>
-   <td>
-    _Write solution here_
-   </td>
-  </tr>
-</table>
+## Tests
 
+```bash
+# Build frontend first (needed for static/SPA tests)
+make build
+make test
+```
 
-Other troubleshooting supports:
-* _Link to FAQs_
-* _Link to runbooks_
-* _Link to other relevant support information_
+With coverage:
 
+```bash
+make test-cov
+```
 
-## Contributing guidelines
-If you'd like to help out, check out our [contributing guidelines](/CONTRIBUTING.md).
+## Project layout
 
+```
+annotation-transfer-tool/
+├── frontend/              # React + Vite UI
+│   ├── src/app/App.tsx
+│   ├── src/lib/api.ts     # Transfer API client
+│   ├── src/lib/files.ts   # Browser .txt read/download helpers
+│   └── dist/              # build output (gitignored)
+├── src/annotation_transfer_tool/
+│   ├── main.py            # FastAPI entry + static file serving
+│   ├── api/routes/        # health, transfer
+│   ├── schemas/
+│   └── services/
+├── tests/
+├── docs/                  # Docsify documentation site (separate from app UI)
+└── Makefile
+```
 
-## Additional documentation
-_Include links and brief descriptions to additional documentation._
+## Troubleshooting
 
-For more information:
-* [Reference link 1](#)
-* [Reference link 2](#)
-* [Reference link 3](#)
+| Issue | Solution |
+|-------|----------|
+| Port 8000 already in use | `lsof -ti :8000 \| xargs kill` then restart uvicorn |
+| UI shows but Transfer fails | Ensure uvicorn is running with latest code |
+| `/` returns 404 | Run `npm run build` in `frontend/` first |
+| First transfer is slow | fast-antx downloads a diff binary on first run (~30s); later calls are fast |
 
+## License
 
-## How to get help
-* File an issue.
-* Email us at openpecha[at]gmail.com.
-* Join our [discord](https://discord.com/invite/7GFpPFSTeA).
-
-
-## Terms of use
-_Project Name_ is licensed under the [MIT License](/LICENSE.md).
+MIT — see [LICENSE](LICENSE).

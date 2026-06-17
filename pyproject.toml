@@ -19,7 +19,7 @@ classifiers = [
 dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]>=0.23",
-    "python-multipart>=0.0.6",
+    "fast-antx>=0.0.1",
 ]
 
 [project.optional-dependencies]
