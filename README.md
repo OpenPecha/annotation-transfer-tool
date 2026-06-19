@@ -1,60 +1,60 @@
-# Annotation Transfer Tool
+# Webuddhist Tools
 
-Web app for transferring text annotations from a labeled source document onto a plain target document, powered by [fast-antx](https://github.com/OpenPecha/fast-antx).
+Unified web platform for OpenPecha / Webuddhist text tools:
 
-## What it does
+- **Annotation Transfer Tool** — transfer annotations from a labeled source onto a plain target ([fast-antx](https://github.com/OpenPecha/fast-antx))
+- **Pydurma Collation** — upload witnesses, align variants, export collated text ([Pydurma](https://github.com/OpenPecha/Pydurma))
 
-1. Paste or upload a **annotated source** `.txt` file (text with tags/labels).
-2. Paste or upload a **plain target** `.txt` file (same content without labels).
-3. Define **transfer rules** (type + regex) that describe how labels look, or import them from a `.txt` pattern file.
-4. Click **Transfer** — the backend copies labels from source onto target.
-5. Download the **after** result as a `.txt` file from the UI.
+Open **/** to choose a tool, then work in `/annotation-transfer` or `/pydurma`.
 
 ## Requirements
 
-- Python 3.8+
-- Node.js 18+ (for frontend development/build)
+- Python 3.8–3.12 (recommended: **3.11** — avoid 3.14; Pydurma dependencies may not build)
+- Node.js 18+
+- [pandoc](https://pandoc.org/) (optional; required for DOCX export only)
 
 ## Install
 
 ```bash
-git clone https://github.com/OpenPecha/annotation-transfer-tool.git
-cd annotation-transfer-tool
-
-python -m venv .venv
+python3.11 -m venv .venv   # or: python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
+pip install --upgrade pip setuptools wheel
 pip install -e ".[dev]"
 cd frontend && npm install && cd ..
 ```
 
-Or use the Makefile:
+For DOCX export:
+
+```bash
+brew install pandoc   # macOS
+```
+
+Or:
 
 ```bash
 make install
 ```
 
-## Run (production-style — one server)
-
-Build the frontend, then start FastAPI. The same server serves the UI and API.
+## Run (production — one server)
 
 ```bash
 cd frontend && npm run build && cd ..
 source .venv/bin/activate
-uvicorn annotation_transfer_tool.main:app --reload --app-dir src
+uvicorn webuddhsit_tools.main:app --reload --app-dir src
 ```
 
-Open **http://localhost:8000/** for the app.
+Open **http://localhost:8000/**
 
 | URL | Purpose |
 |-----|---------|
-| http://localhost:8000/ | React UI |
+| http://localhost:8000/ | Tool selector |
+| http://localhost:8000/annotation-transfer | Annotation transfer UI |
+| http://localhost:8000/pydurma | Pydurma collation UI |
 | http://localhost:8000/docs | Swagger API docs |
 | http://localhost:8000/api/health | Health check |
 
-## Run (development — hot reload)
-
-Use two terminals:
+## Run (development)
 
 ```bash
 # Terminal 1 — API
@@ -64,71 +64,57 @@ make dev-api
 make dev-ui
 ```
 
-Open **http://localhost:5173/** (Vite dev server).
+Open **http://localhost:5173/**
 
 ## API endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/health` | Health check |
-| POST | `/api/transfer` | Transfer annotations (JSON body) |
-
-File import and export (`.txt` only) are handled in the browser — no upload or download API.
-
-### Transfer example
-
-```bash
-curl -X POST http://localhost:8000/api/transfer \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "source": "#A# cat",
-    "target": "cat",
-    "patterns": [["color", "(#.+?#)"]],
-    "output": "txt"
-  }'
-```
+| GET | `/api/health` | Combined health check |
+| GET | `/api/options` | Collation languages and export formats |
+| POST | `/api/transfer` | Transfer annotations (JSON) |
+| POST | `/api/collation` | Run collation (multipart) |
+| PUT | `/api/collation/{job_id}/selections` | Save variant selections for a session |
+| POST | `/api/export/{job_id}` | Export collation result |
 
 ## Tests
 
 ```bash
-# Build frontend first (needed for static/SPA tests)
 make build
 make test
 ```
 
-With coverage:
+## Deploy (Render)
+
+**Build command:**
 
 ```bash
-make test-cov
+pip install -U pip && pip install . && cd frontend && npm ci && npm run build
+```
+
+**Start command:**
+
+```bash
+uvicorn webuddhsit_tools.main:app --host 0.0.0.0 --port $PORT --app-dir src
 ```
 
 ## Project layout
 
 ```
-annotation-transfer-tool/
-├── frontend/              # React + Vite UI
-│   ├── src/app/App.tsx
-│   ├── src/lib/api.ts     # Transfer API client
-│   ├── src/lib/files.ts   # Browser .txt read/download helpers
-│   └── dist/              # build output (gitignored)
-├── src/annotation_transfer_tool/
-│   ├── main.py            # FastAPI entry + static file serving
-│   ├── api/routes/        # health, transfer
-│   ├── schemas/
-│   └── services/
-├── tests/
-├── docs/                  # Docsify documentation site (separate from app UI)
-└── Makefile
+webuddhsit-tools/
+├── frontend/                    # Unified React UI
+│   ├── src/app/
+│   │   ├── ToolSelector.tsx     # Landing page
+│   │   ├── annotation-transfer/ # Transfer tool
+│   │   ├── pydurma/             # Collation tool
+│   │   └── shared/              # Shared header, theme, i18n
+│   └── dist/
+├── src/
+│   ├── webuddhsit_tools/        # Unified FastAPI entry
+│   ├── annotation_transfer_tool/
+│   └── pydurma_web/
+└── tests/
 ```
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Port 8000 already in use | `lsof -ti :8000 \| xargs kill` then restart uvicorn |
-| UI shows but Transfer fails | Ensure uvicorn is running with latest code |
-| `/` returns 404 | Run `npm run build` in `frontend/` first |
-| First transfer is slow | fast-antx downloads a diff binary on first run (~30s); later calls are fast |
 
 ## License
 

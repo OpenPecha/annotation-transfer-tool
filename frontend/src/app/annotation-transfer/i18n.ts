@@ -1,10 +1,10 @@
+import { commonLabels } from "@/app/shared/i18n/common";
+
 export const translations = {
   en: {
+    ...commonLabels.en,
     appTitle: "Annotation Transfer Tool",
-    languageLabel: "Language",
-    english: "English",
-    tibetan: "Tibetan",
-    reset: "Reset",
+    appSubtitle: commonLabels.en.brandSubtitle,
     resetTitle: "Reset all fields",
     switchToSideBySide: "Switch to side-by-side layout",
     switchToStacked: "Switch to stacked layout",
@@ -34,11 +34,9 @@ export const translations = {
     rulesImportFailed: "Failed to import transfer rules.",
   },
   bo: {
+    ...commonLabels.bo,
     appTitle: "མཆན་སྤོ་སྒྱུར་ལག་ཆ།",
-    languageLabel: "སྐད་ཡིག",
-    english: "English",
-    tibetan: "བོད་ཡིག",
-    reset: "བསྐྱར་སྒྲིག",
+    appSubtitle: commonLabels.bo.brandSubtitle,
     resetTitle: "ཚང་མ་བསྐྱར་སྒྲིག",
     switchToSideBySide: "གཤིབ་སྟེ་སྟོན་པར་སྒྱུར།",
     switchToStacked: "བརྩེགས་སྟོན་པར་སྒྱུར།",

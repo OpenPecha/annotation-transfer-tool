@@ -12,14 +12,17 @@ export async function readTxtFile(file: File): Promise<TxtFileResult> {
   return { content, filename: file.name };
 }
 
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function downloadTxtFile(content: string, filename: string): void {
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename.endsWith(".txt") ? filename : `${filename}.txt`;
-  link.click();
-
-  URL.revokeObjectURL(url);
+  const name = filename.endsWith(".txt") ? filename : `${filename}.txt`;
+  downloadBlob(blob, name);
 }

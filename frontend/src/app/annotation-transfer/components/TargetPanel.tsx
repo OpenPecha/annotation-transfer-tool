@@ -1,8 +1,8 @@
 import { Download, Loader2, Upload } from "lucide-react";
 
-import { ResizablePanel } from "@/app/components/ui/resizable";
-import type { AppLabels } from "@/app/i18n";
-import type { ActiveTab, UploadPanel } from "@/app/types";
+import { ResizablePanel } from "@/components/ui/resizable";
+import type { AppLabels } from "@/app/annotation-transfer/i18n";
+import type { ActiveTab, UploadPanel } from "@/app/annotation-transfer/types";
 
 interface TargetPanelProps {
   labels: AppLabels;

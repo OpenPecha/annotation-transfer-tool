@@ -1,6 +1,6 @@
 import { Loader2, Plus, Trash2, Upload } from "lucide-react";
 
-import type { AppLabels } from "@/app/i18n";
+import type { AppLabels } from "@/app/annotation-transfer/i18n";
 import type { TransferRule } from "@/lib/patterns";
 
 interface TransferRulesPanelProps {

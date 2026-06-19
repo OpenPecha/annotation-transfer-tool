@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from fast_antx.core import transfer
 
-from annotation_transfer_tool.main import app
+from webuddhsit_tools.main import app
 
 client = TestClient(app)
 

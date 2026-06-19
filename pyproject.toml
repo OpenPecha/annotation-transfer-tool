@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "annotation_transfer_tool"
+name = "webuddhsit-tools"
 version = "0.0.1"
 authors = [
   { name="OpenPecha", email="dev@openpecha.org" },
 ]
-description = "Annotation transfer tool — FastAPI app with fast-antx backend"
+description = "Webuddhist tools — annotation transfer and Pydurma collation"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.14"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -20,6 +20,10 @@ dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]>=0.23",
     "fast-antx>=0.0.1",
+    "python-multipart",
+    "pydantic-settings",
+    "setuptools",
+    "Pydurma @ git+https://github.com/OpenPecha/Pydurma.git",
 ]
 
 [project.optional-dependencies]
@@ -33,3 +37,9 @@ dev = [
 [project.urls]
 "Homepage" = "https://github.com/OpenPecha/annotation-transfer-tool"
 "Bug Tracker" = "https://github.com/OpenPecha/annotation-transfer-tool/issues"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]

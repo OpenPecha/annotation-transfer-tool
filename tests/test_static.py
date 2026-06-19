@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from annotation_transfer_tool.main import _FRONTEND_DIST, app
+from webuddhsit_tools.main import _FRONTEND_DIST, app
 
 client = TestClient(app)
 
