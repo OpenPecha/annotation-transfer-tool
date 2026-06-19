@@ -89,7 +89,7 @@ make test
 **Build command:**
 
 ```bash
-pip install -U pip && pip install . && cd frontend && npm ci && npm run build
+pip install -U pip setuptools wheel && pip install --no-build-isolation pyewts==0.2.0 && pip install . && cd frontend && npm ci && npm run build
 ```
 
 **Start command:**
