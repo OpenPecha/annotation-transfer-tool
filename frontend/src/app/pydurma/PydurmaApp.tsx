@@ -10,7 +10,6 @@ import { useSelections } from "@/app/pydurma/hooks/useSelections";
 import { translations } from "@/app/pydurma/i18n";
 import type { OutputFormat } from "@/app/pydurma/types/collation";
 import { AppHeader } from "@/app/shared/AppHeader";
-import { useTheme } from "@/app/shared/hooks/useTheme";
 import { useUiLanguage } from "@/app/shared/hooks/useUiLanguage";
 
 export function PydurmaApp() {
@@ -27,7 +26,6 @@ export function PydurmaApp() {
   const [uploadPanelKey, setUploadPanelKey] = useState(0);
   const { language, setLanguage } = useUiLanguage();
   const labels = translations[language];
-  const { theme, toggleTheme } = useTheme();
 
   const {
     selections,
@@ -79,9 +77,7 @@ export function PydurmaApp() {
       <AppHeader
         labels={labels}
         language={language}
-        theme={theme}
         hasWork={Boolean(result)}
-        onToggleTheme={toggleTheme}
         onLanguageChange={setLanguage}
         onReset={handleReset}
       />

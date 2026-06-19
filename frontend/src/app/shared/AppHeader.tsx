@@ -1,8 +1,6 @@
 import { ArrowLeft, Languages, RotateCcw } from "lucide-react";
 
 import { OPENPECHA_LOGO } from "@/app/shared/brand";
-import { ThemeToggle } from "@/app/shared/ThemeToggle";
-import type { Theme } from "@/app/shared/hooks/useTheme";
 import type { CommonLabels, UiLanguage } from "@/app/shared/i18n/common";
 
 export const HOME_PATH = "/";
@@ -16,12 +14,10 @@ export interface HeaderLabels extends CommonLabels {
 interface AppHeaderProps {
   labels: HeaderLabels;
   language: UiLanguage;
-  theme: Theme;
   hasWork: boolean;
   resetDisabled?: boolean;
   showBack?: boolean;
   onReset: () => void;
-  onToggleTheme: () => void;
   onLanguageChange: (language: UiLanguage) => void;
   toolbarExtra?: React.ReactNode;
 }
@@ -29,12 +25,10 @@ interface AppHeaderProps {
 export function AppHeader({
   labels,
   language,
-  theme,
   hasWork,
   resetDisabled = false,
   showBack = true,
   onReset,
-  onToggleTheme,
   onLanguageChange,
   toolbarExtra,
 }: AppHeaderProps) {
@@ -81,7 +75,6 @@ export function AppHeader({
           <RotateCcw size={11} /> {labels.reset}
         </button>
         {toolbarExtra}
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} labels={labels} />
         <button
           type="button"
           onClick={() => onLanguageChange(nextLanguage)}

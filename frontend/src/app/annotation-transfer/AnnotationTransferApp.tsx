@@ -11,7 +11,6 @@ import type {
 } from "@/app/annotation-transfer/types";
 import { AppFooter } from "@/app/shared/AppFooter";
 import { AppHeader } from "@/app/shared/AppHeader";
-import { useTheme } from "@/app/shared/hooks/useTheme";
 import { useUiLanguage } from "@/app/shared/hooks/useUiLanguage";
 import {
   ResizableHandle,
@@ -26,7 +25,6 @@ import {
 } from "@/lib/patterns";
 
 export function AnnotationTransferApp() {
-  const { theme, toggleTheme } = useTheme();
   const { language, setLanguage } = useUiLanguage();
   const [panelLayout, setPanelLayout] = useState<PanelLayout>("vertical");
   const labels = translations[language];
@@ -238,11 +236,9 @@ export function AnnotationTransferApp() {
       <AppHeader
         labels={labels}
         language={language}
-        theme={theme}
         hasWork={hasWork}
         resetDisabled={transferring}
         onReset={handleReset}
-        onToggleTheme={toggleTheme}
         onLanguageChange={setLanguage}
         toolbarExtra={
           <button

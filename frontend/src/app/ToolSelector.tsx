@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 
 import { selectorLabels } from "@/app/shared/i18n/selector";
 import { OPENPECHA_LOGO } from "@/app/shared/brand";
-import { ThemeToggle } from "@/app/shared/ThemeToggle";
-import { useTheme } from "@/app/shared/hooks/useTheme";
 import { useUiLanguage } from "@/app/shared/hooks/useUiLanguage";
 import { commonLabels } from "@/app/shared/i18n/common";
 
@@ -25,7 +23,6 @@ const TOOLS = [
 
 export function ToolSelector() {
   const { language, setLanguage } = useUiLanguage();
-  const { theme, toggleTheme } = useTheme();
   const labels = selectorLabels[language];
   const chrome = commonLabels[language];
 
@@ -50,7 +47,6 @@ export function ToolSelector() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ThemeToggle theme={theme} onToggle={toggleTheme} labels={chrome} />
           <button
             type="button"
             onClick={() => setLanguage(nextLanguage)}
