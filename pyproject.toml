@@ -23,6 +23,7 @@ dependencies = [
     "python-multipart",
     "pydantic-settings",
     "setuptools",
+    "openpecha>=2.5.0",
     "Pydurma @ git+https://github.com/OpenPecha/Pydurma.git",
 ]
 
