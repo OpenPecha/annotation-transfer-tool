@@ -19,7 +19,7 @@ Open **/** to choose a tool, then work in `/annotation-transfer` or `/pydurma`.
 python3.11 -m venv .venv   # or: python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
-pip install --upgrade pip setuptools wheel
+pip install --upgrade pip "setuptools<81" wheel
 pip install -e ".[dev]"
 cd frontend && npm install && cd ..
 ```
@@ -89,7 +89,7 @@ make test
 **Build command:**
 
 ```bash
-pip install -U pip setuptools wheel && pip install --no-build-isolation pyewts==0.2.0 && pip install . && cd frontend && npm ci && npm run build
+pip install -U pip "setuptools<81" wheel && pip install --no-build-isolation pyewts==0.2.0 && pip install . && cd frontend && npm ci && npm run build
 ```
 
 **Start command:**

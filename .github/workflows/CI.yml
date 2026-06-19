@@ -31,7 +31,7 @@ jobs:
 
     - name: Install Python dependencies
       run: |
-        pip install -U pip setuptools wheel
+        pip install -U pip "setuptools<81" wheel
         pip install --no-build-isolation pyewts==0.2.0
         pip install .
         pip install ".[dev]"

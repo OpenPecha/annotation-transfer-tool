@@ -1,7 +1,7 @@
 .PHONY: install dev-api dev-ui build test test-cov
 
 install:
-	pip install --upgrade pip setuptools wheel
+	pip install --upgrade pip "setuptools<81" wheel
 	pip install -e ".[dev]"
 	cd frontend && npm install
 
